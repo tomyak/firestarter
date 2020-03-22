@@ -2,9 +2,9 @@
 let admin
 let db
 
-const triggers = require('triggers');
-const batchy = require('batchy');
-const timing = require('timing');
+const triggers = require('./triggers/index.js');
+const batchy = require('./batchy/index.js');
+const timing = require('./timing/index.js');
 
 
 const config = (settings)=>{

@@ -9,7 +9,7 @@ var config  = (settings)=>{
 }
 
 
-var waitForQuery = (fn,ms=10000,tick=1000)=>{
+var waitUntil = (fn,ms=10000,tick=1000)=>{
   const endtime=moment().add(ms,'milliseconds')
   return new Promise((resolve,reject)=>{
     let timer
@@ -28,7 +28,7 @@ var waitForQuery = (fn,ms=10000,tick=1000)=>{
   })
 }
 
-var waitUntil = (snap,ms=10000)=>{
+var waitForQuery = (snap,ms=10000)=>{
   return new Promise((resolve,reject)=>{
     let timer
     let unsubscribe
