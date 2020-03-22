@@ -60,9 +60,9 @@ module.exports = {
   eventAge,
   fieldChanges,
   fieldChanged,
+  fieldChangedTo,
   isUpdate,
   isCreate,
   isDelete,
-  fieldChangedTo,
   config
 }

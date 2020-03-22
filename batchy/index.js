@@ -24,6 +24,7 @@ class QueryBatch {
     this.batch = new Batch()
     this.maps = []
     this.name = this.getName()
+
   }
 
   getName() {
@@ -51,24 +52,29 @@ class QueryBatch {
     return this
   }
 
+  doc(id) {
+    this.items.push( db.collection(this._collection).doc(id) )
+    return this
+  }
+
   where(lhs,op,rhs) {
     this.query = this.query.where(lhs,op,rhs)
     return this
   }
 
   async get() {
-    if (this.query){
-      let msg = `select from ${this._collection}`
-      console.time(this.name + ':' + msg)
-      var results = await this.query.get()
-      console.timeEnd(this.name + ':' + msg)
-      console.log(`${results.size} ${this._collection}`);
-      var $this = this
-      results.forEach(doc=>{
-        var ref = db.collection($this._collection).doc(doc.id)
+    var $this = this
+    if ($this.query){
+      var results = await $this.query.get()
+      if (results.exists){
+        var ref = db.collection($this._collection).doc(results.id)
         $this.items.push(ref)
-      })
-      console.log(`${this.items.length} items`);
+      } else if (typeof(results.forEach)==='function') {
+        results.forEach(doc=>{
+          var ref = db.collection($this._collection).doc(doc.id)
+          $this.items.push(ref)
+        })
+      }
       this.query = null
     }
     return this
@@ -86,6 +92,7 @@ class QueryBatch {
     this.items = []
     this.query = null
     this._collection = null
+
     return this
   }
 
@@ -172,16 +179,16 @@ class Batch {
 
   async commit(){
     let msg = `Commit ${this.items.length} items`
-    console.time(this.name + ':' + msg)
+    // console.time(this.name + ':' + msg)
     let batchNumber = 0
     let batchSize = 0
     let batch = db.batch()
     const submitSubBatch = async ()=>{
       let bmsg = `Commit ${batchSize} items in batch ${batchNumber}`
-      console.time(this.name + ':' + bmsg)
+      // console.time(this.name + ':' + bmsg)
       batchNumber++
       await batch.commit()
-      console.timeEnd(this.name + ':' + bmsg)
+      // console.timeEnd(this.name + ':' + bmsg)
     }
     for(var i=0; i<this.items.length; i++){
       let item = this.items[i]
@@ -196,7 +203,7 @@ class Batch {
     if (batchSize>0){
       await submitSubBatch()
     }
-    console.timeEnd(this.name + ':' + msg)
+    // console.timeEnd(this.name + ':' + msg)
     var rc = this.items.length
     this.items = []
     return rc
