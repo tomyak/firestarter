@@ -53,7 +53,7 @@ class QueryBatch {
   }
 
   doc(id) {
-    this.items.push( db.collection(this._collection).doc(id) )
+    this.query = this.query.doc(id)
     return this
   }
 

@@ -1,10 +1,14 @@
 {
   "name": "firestarter-js",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "engines": {
     "node": "10"
   },
+  "main": "index.js",
   "description": "Firebase Helper Components",
+  "homepage": "https://github.com/tomyak/firestarter#readme",
+  "keywords": ["firebase","firestore"],
+  "license": "MIT",
   "dependencies": {
     "moment": "^2.24.0",
     "moment-timezone": "^0.5.25",
