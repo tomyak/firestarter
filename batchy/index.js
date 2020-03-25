@@ -1,6 +1,6 @@
 'use strict';
 var db
-const MAX_BATCH = 500
+const MAX_BATCH = 500/2 // Firestore counts servertimestamps as writes
 var config  = (settings)=>{
   db    = settings.db
 }
