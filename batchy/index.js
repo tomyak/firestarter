@@ -1,10 +1,11 @@
 'use strict';
-var db
-const MAX_BATCH = 500/2 // Firestore counts servertimestamps as writes
+// const admin = require('firebase-admin');
+let db
+// let db = admin.firestore()
+const MAX_BATCH = 500 // Firestore counts transforms as writes
 var config  = (settings)=>{
   db    = settings.db
 }
-
 
 const refCollection = (ref)=>{
   try {
@@ -177,33 +178,80 @@ class Batch {
     return this
   }
 
+  transformCount(property) {
+    return (typeof(property)==='object' && property.constructor && property.constructor.name && property.constructor.name.endsWith('Transform')) ? 1 : 0
+  }
+
+  writeCount(obj) {
+    if (!obj){
+      return 1
+    }
+    const propCounter = (acc,k)=>acc + this.transformCount(obj[k])
+    return 1+Object.keys(obj).reduce(propCounter,0)
+  }
+
+  batchCount() {
+    let msg = `Commit ${this.items.length} items`
+    process.env.DEBUG && console.time(this.name + ':' + msg)
+    let batchNumber = 0
+    let batchSize = 0
+    for(var i=0; i<this.items.length; i++){
+      let item = this.items[i]
+      const cost = this.writeCount(item.obj)
+      if (batchSize+cost>MAX_BATCH){
+        batchNumber++
+        batchSize = 0
+      }
+      batchSize+=cost
+    }
+    if (batchSize>0){
+      batchNumber++
+    }
+    process.env.DEBUG && console.log(`There are ${batchNumber} batches`)
+    return batchNumber
+  }
+
   async commit(){
     let msg = `Commit ${this.items.length} items`
-    // console.time(this.name + ':' + msg)
+    process.env.DEBUG && console.time(this.name + ':' + msg)
     let batchNumber = 0
     let batchSize = 0
     let batch = db.batch()
+
     const submitSubBatch = async ()=>{
       let bmsg = `Commit ${batchSize} items in batch ${batchNumber}`
-      // console.time(this.name + ':' + bmsg)
+      process.env.DEBUG && console.time(this.name + ':' + bmsg)
       batchNumber++
       await batch.commit()
-      // console.timeEnd(this.name + ':' + bmsg)
+      process.env.DEBUG && console.timeEnd(this.name + ':' + bmsg)
     }
     for(var i=0; i<this.items.length; i++){
       let item = this.items[i]
-      batch[item.action]( item.ref, item.obj )
-      batchSize++
-      if (batchSize===MAX_BATCH){
+
+      /*
+      https://firebase.google.com/docs/firestore/manage-data/transactions
+      A batched write can contain up to 500 operations. Each operation in the batch counts separately towards your Cloud Firestore usage. Within a write operation, field transforms like serverTimestamp, arrayUnion, and increment each count as an additional operation.
+      */
+      // Count additional transforms
+      const cost = this.writeCount(item.obj)
+
+      // If this item puts us over the limit, commit the current batch first
+      // If this item would set us exactly to the limit, the next object would cause a commit or if this is the
+      // last object, then the final catch all will commit
+      // If a single object has more than MAX_BATCH writes, then there is a hole and it cannot be batched
+      if (batchSize+cost>MAX_BATCH){
         await submitSubBatch()
         batch = db.batch()
         batchSize = 0
       }
+
+      batchSize+=cost
+      batch[item.action]( item.ref, item.obj )
     }
     if (batchSize>0){
       await submitSubBatch()
     }
-    // console.timeEnd(this.name + ':' + msg)
+    process.env.DEBUG && console.timeEnd(this.name + ':' + msg)
     var rc = this.items.length
     this.items = []
     return rc
